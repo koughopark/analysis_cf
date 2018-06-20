@@ -17,12 +17,13 @@ def crawling(url='',
         resp = urlopen(request)
         try:
             receive = resp.read()
-            result = receive.decode(encoding)
-            result = store(proc(result))
+            resulta = receive.decode(encoding)
+            result = store(proc(resulta))
 
         except UnicodeDecodeError:
             result = receive.decode(encoding, 'replace')
 
+        # print('%s: success for request [%s]' % (datetime.now(), url))
         return result
     except Exception as e:
         err(e)
