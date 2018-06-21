@@ -1,6 +1,9 @@
 import urllib
 from itertools import count
 import pandas as pd
+from selenium import webdriver
+import time
+
 
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as et
@@ -68,39 +71,37 @@ def crawling_pericana():
 def crawling_kyochon():
     results = []
 
-    for sido1 in range(1, 2):
+    for sido1 in range(1, 5):
         for sido2 in count(start=1):
+            try:
             # if sido2 is not None:
             #     break
-
-            url = 'http://www.kyochon.com/shop/domestic.asp?sido1=%d&sido2=%d&txtsearch=' % (sido1, sido2)
-            html = cw.crawling(url=url)
-            if html is None:
+                url = 'http://www.kyochon.com/shop/domestic.asp?sido1=%d&sido2=%d&txtsearch=' % (sido1, sido2)
+                html = cw.crawling(url=url)
+                # if html is None:
+                #     break
+                bs = BeautifulSoup(html, 'html.parser')
+                tag_table = bs.find('ul', attrs={'class': 'list'})
+                tag_li = tag_table.find('li')
+                print(tag_li)
+                tag_dl = tag_li.findAll('dl')
+                print(tag_dl)
+                # tag_dt = tag_dl.find('dt')
+                # tags_dd = tag_dl.findAll('dd')
+                for a in tag_dl:
+                    strings = list(a.strings)
+                    print(strings)
+                    # print(strings)
+                    name = strings[1]
+                    address = strings[3].strip()
+                    sidogu = address.split()[:2]
+                    results.append((name, address) + tuple(sidogu))
+            # # 끝 검출
+            except:
                 break
-            bs = BeautifulSoup(html, 'html.parser')
 
-            tag_table = bs.find('ul', attrs={'class': 'list'})
-            tag_li = tag_table.find('li')
-            tag_dl = tag_li.findAll('dl')
-            tag_dl1 = tag_li.find('dl')
-            tag_dt = tag_dl1.find('dt')
-            # tags_dd = tag_dl.findAll('dd')
 
-            # 끝 검출
-            if tag_dt is None:
-                break
 
-            for a in tag_dl:
-                strings = list(a.strings)
-                # print(strings)
-
-                name = strings[1]
-                address = strings[3].replace('\n', '').replace('\t', '')
-                print(strings[3])
-                # print(address.split())
-                sidogu = address.split()[:2]
-
-                results.append((name, address) + tuple(sidogu))
 
     # print(results)
 
@@ -108,14 +109,13 @@ def crawling_kyochon():
 
         # proc
         # print(results)
-
         # store
-        table = pd.DataFrame(results, columns=['name', 'address', 'sido', 'gungu'])
+    table = pd.DataFrame(results, columns=['name', 'address', 'sido', 'gungu'])
 
-        table['sido'] = table.sido.apply(lambda v: sido_dict.get(v, v))
-        table['gungu'] = table.gungu.apply(lambda v: gungu_dict.get(v, v))
+    table['sido'] = table.sido.apply(lambda v: sido_dict.get(v, v))
+    table['gungu'] = table.gungu.apply(lambda v: gungu_dict.get(v, v))
 
-        table.to_csv('{0}/kyochon_table.csv'.format(RESULT_DIRECTORY), encoding='utf-8', mode='w', index=True)
+    table.to_csv('{0}/kyochon_table.csv'.format(RESULT_DIRECTORY), encoding='utf-8', mode='w', index=True)
 
 
 
@@ -153,6 +153,34 @@ def store_nene(data):
     table.to_csv('{0}/nene_table.csv'.format(RESULT_DIRECTORY), encoding='utf-8', mode='w', index=True)
 
 
+def crawling_goobne():
+    url='http://www.goobne.co.kr/store/search_store.jsp'
+
+    #첫 페이지 로딩
+    wd = webdriver.Chrome('D:/bigdata/chromedriver/chromedriver.exe')
+    wd.get(url)
+    time.sleep(5)
+
+    for page in range(101, 105):
+        #자바스크립트 실행
+        script = 'store.getList(%d)' % page
+        wd.execute_script(script)   # 실행
+        time.sleep(5)
+
+        # 실행결과 HTML(rendering된 HTML) 가져오기
+        html = wd.page_source
+
+        #parsing with bs4
+        bs = BeautifulSoup(html, 'html.parser')
+        tag_tbody = bs.find('tbody', attrs={'id': 'store_list'})
+        tags_tr = tag_tbody.findAll('tr')
+
+
+        # 끝 검출
+        if tags_tr[0].get('class') is None:
+            break
+
+        print(tags_tr)
 
 
 # ***************************************************
@@ -171,4 +199,7 @@ if __name__ == '__main__':
     # )
 
     # kyochon
-    crawling_kyochon()
+    # crawling_kyochon()
+
+    # goobne
+    crawling_goobne()
