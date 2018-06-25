@@ -3,8 +3,8 @@ from urllib.request import Request, urlopen
 from datetime import datetime
 
 
-def error(e):
-    print('%s : %s' % (e, datetime.now()), file=sys.stderr)
+# def error(e):
+#     print('%s : %s' % (e, datetime.now()), file=sys.stderr)
 
 
 def crawling(url='',

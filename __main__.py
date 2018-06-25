@@ -1,12 +1,11 @@
 import urllib
 from itertools import count
+from datetime import datetime
 import pandas as pd
-from selenium import webdriver
-import time
-
-
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as et
+import time
+from selenium import webdriver
 import collection.crawler as cw
 from collection.data_dict import sido_dict, gungu_dict
 
@@ -71,11 +70,11 @@ def crawling_pericana():
 def crawling_kyochon():
     results = []
 
-    for sido1 in range(1, 5):
+    for sido1 in count(start=1):
         for sido2 in count(start=1):
             try:
-            # if sido2 is not None:
-            #     break
+                # if sido2 is not None:
+                #     break
                 url = 'http://www.kyochon.com/shop/domestic.asp?sido1=%d&sido2=%d&txtsearch=' % (sido1, sido2)
                 html = cw.crawling(url=url)
                 # if html is None:
@@ -100,27 +99,17 @@ def crawling_kyochon():
             except:
                 break
 
-
-
-
     # print(results)
 
-
-
-        # proc
-        # print(results)
-        # store
+    # proc
+    # print(results)
+    # store
     table = pd.DataFrame(results, columns=['name', 'address', 'sido', 'gungu'])
 
     table['sido'] = table.sido.apply(lambda v: sido_dict.get(v, v))
     table['gungu'] = table.gungu.apply(lambda v: gungu_dict.get(v, v))
 
     table.to_csv('{0}/kyochon_table.csv'.format(RESULT_DIRECTORY), encoding='utf-8', mode='w', index=True)
-
-
-
-
-
 
     #         if condition:
     #             break
@@ -154,34 +143,49 @@ def store_nene(data):
 
 
 def crawling_goobne():
-    url='http://www.goobne.co.kr/store/search_store.jsp'
+    url = 'http://www.goobne.co.kr/store/search_store.jsp'
 
-    #첫 페이지 로딩
+    # 첫 페이지 로딩
     wd = webdriver.Chrome('D:/bigdata/chromedriver/chromedriver.exe')
     wd.get(url)
     time.sleep(5)
 
-    for page in range(101, 105):
-        #자바스크립트 실행
-        script = 'store.getList(%d)' % page
-        wd.execute_script(script)   # 실행
-        time.sleep(5)
+    results = []
 
-        # 실행결과 HTML(rendering된 HTML) 가져오기
+    for page in count(start=1):
+        # 자바스크립트 실행
+        script = 'store.getList(%d)' % page
+        wd.execute_script(script)
+        print('%s : success for script execute [%s]' % (datetime.now(), script))
+        time.sleep(1)
+
+        # 실행결과HTML(rendering된 HTML) 가져오기
         html = wd.page_source
 
-        #parsing with bs4
+        # parsing with bs4
         bs = BeautifulSoup(html, 'html.parser')
         tag_tbody = bs.find('tbody', attrs={'id': 'store_list'})
         tags_tr = tag_tbody.findAll('tr')
 
-
-        # 끝 검출
+        # 마지막 검출
         if tags_tr[0].get('class') is None:
             break
 
-        print(tags_tr)
+        for tag_tr in tags_tr:
+            strings = list(tag_tr.strings)
+            name = strings[1]
+            address = strings[6]
+            sidogu = address.split()[:2]
 
+            results.append((name, address) + tuple(sidogu))
+
+    # store
+    table = pd.DataFrame(results, columns=['name', 'address', 'sido', 'gungu'])
+
+    table['sido'] = table.sido.apply(lambda v: sido_dict.get(v, v))
+    table['gungu'] = table.gungu.apply(lambda v: gungu_dict.get(v, v))
+
+    table.to_csv('{0}/goobne_table.csv'.format(RESULT_DIRECTORY), encoding='utf-8', mode='w', index=True)
 
 # ***************************************************
 
@@ -199,7 +203,7 @@ if __name__ == '__main__':
     # )
 
     # kyochon
-    # crawling_kyochon()
+    crawling_kyochon()
 
     # goobne
-    crawling_goobne()
+    # crawling_goobne()
